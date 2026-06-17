@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>LeadHunter — Apollo Lead Scraper</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0a0a0f; --surface: #111118; --surface2: #1a1a24;
+    --border: #2a2a38; --accent: #6c63ff; --accent2: #a78bfa;
+    --green: #22c55e; --red: #ef4444; --yellow: #f59e0b;
+    --text: #f1f0ff; --muted: #6b6880; --subtle: #3a3850;
+  }
+  body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; min-height: 100vh; font-size: 14px; }
+  header {
+    border-bottom: 1px solid var(--border); padding: 18px 32px;
+    display: flex; align-items: center; justify-content: space-between;
+    background: var(--surface); position: sticky; top: 0; z-index: 100;
+  }
+  .logo { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 18px; letter-spacing: -0.5px; }
+  .logo-icon { width: 32px; height: 32px; background: var(--accent); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+  .logo span { color: var(--accent2); }
+  .header-stats { display: flex; gap: 24px; font-size: 12px; color: var(--muted); }
+  .header-stats strong { color: var(--accent2); font-family: 'JetBrains Mono', monospace; }
+  .layout { display: grid; grid-template-columns: 300px 1fr; min-height: calc(100vh - 61px); }
+  .sidebar { background: var(--surface); border-right: 1px solid var(--border); padding: 24px 20px; display: flex; flex-direction: column; gap: 20px; }
+  .sidebar-title { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1.5px; color: var(--muted); margin-bottom: 4px; }
+  .field-group { display: flex; flex-direction: column; gap: 6px; }
+  .field-group label { font-size: 12px; font-weight: 500; color: var(--muted); letter-spacing: 0.3px; }
+  .field-group input, .field-group select, .field-group textarea {
+    background: var(--surface2); border: 1px solid var(--border); border-radius: 8px;
+    color: var(--text); padding: 10px 12px; font-size: 13px; font-family: 'Inter', sans-serif;
+    outline: none; transition: border-color 0.2s; width: 100%;
+  }
+  .field-group input:focus, .field-group select:focus, .field-group textarea:focus { border-color: var(--accent); }
+  .field-group select option { background: var(--surface2); }
+  .api-key-row { display: flex; gap: 6px; }
+  .api-key-row input { flex: 1; font-family: 'JetBrains Mono', monospace; font-size: 12px; }
+  .toggle-vis { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; color: var(--muted); padding: 0 10px; cursor: pointer; font-size: 14px; }
+  .toggle-vis:hover { color: var(--text); border-color: var(--accent); }
+  .divider { height: 1px; background: var(--border); }
+  .range-row { display: flex; gap: 8px; }
+  .range-row input { flex: 1; }
+  .search-btn {
+    background: var(--accent); color: #fff; border: none; border-radius: 10px;
+    padding: 13px; font-size: 14px; font-weight: 600; cursor: pointer;
+    transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  .search-btn:hover { background: #7c73ff; transform: translateY(-1px); }
+  .search-btn:disabled { background: var(--subtle); cursor: not-allowed; transform: none; }
+  .spinner { width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .main { display: flex; flex-direction: column; }
+  .toolbar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 24px; border-bottom: 1px solid var(--border); background: var(--surface); gap: 16px;
+  }
+  .result-count { font-size: 13px; color: var(--muted); }
+  .result-count strong { color: var(--text); font-weight: 600; }
+  .toolbar-actions { display: flex; gap: 10px; }
+  .btn-outline {
+    background: transparent; border: 1px solid var(--border); color: var(--text);
+    border-radius: 8px; padding: 8px 16px; font-size: 13px; font-weight: 500;
+    cursor: pointer; transition: all 0.15s; display: flex; align-items: center; gap: 6px;
+  }
+  .btn-outline:hover { border-color: var(--accent); color: var(--accent2); }
+  .btn-green {
+    background: var(--green); border: none; color: #000; border-radius: 8px;
+    padding: 8px 16px; font-size: 13px; font-weight: 600; cursor: pointer;
+    transition: all 0.15s; display: flex; align-items: center; gap: 6px;
+  }
+  .btn-green:hover { background: #16a34a; }
+  .pagination { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
+  .page-btn { background: var(--surface2); border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 4px 10px; cursor: pointer; font-size: 12px; }
+  .page-btn:hover:not(:disabled) { border-color: var(--accent); }
+  .page-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+  .table-wrap { flex: 1; overflow: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  thead th {
+    background: var(--surface2); color: var(--muted); font-size: 11px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 1px; padding: 12px 16px; text-align: left;
+    border-bottom: 1px solid var(--border); position: sticky; top: 0; white-space: nowrap;
+  }
+  tbody tr { border-bottom: 1px solid var(--border); transition: background 0.1s; }
+  tbody tr:hover { background: var(--surface2); }
+  td { padding: 13px 16px; vertical-align: middle; max-width: 200px; }
+  .lead-name { font-weight: 600; color: var(--text); white-space: nowrap; }
+  .lead-title { color: var(--muted); font-size: 12px; margin-top: 2px; }
+  .company-name { font-weight: 500; }
+  .company-size {
+    display: inline-block; background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 4px; padding: 2px 8px; font-size: 11px; font-family: 'JetBrains Mono', monospace;
+    color: var(--accent2); white-space: nowrap;
+  }
+  .contact-item { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 12px; margin-bottom: 3px; font-family: 'JetBrains Mono', monospace; }
+  .contact-item.has { color: var(--text); }
+  .badge-locked {
+    display: inline-flex; align-items: center; gap: 4px;
+    background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.3);
+    color: var(--yellow); border-radius: 4px; padding: 2px 8px; font-size: 11px; font-weight: 500;
+  }
+  .badge-no { color: var(--subtle); font-size: 11px; }
+  .website-link { color: var(--accent2); text-decoration: none; font-size: 12px; font-family: 'JetBrains Mono', monospace; }
+  .website-link:hover { text-decoration: underline; }
+  .reveal-btn {
+    background: var(--accent); border: none; color: #fff; border-radius: 5px;
+    padding: 4px 10px; font-size: 11px; font-weight: 600; cursor: pointer;
+    transition: background 0.15s; white-space: nowrap;
+  }
+  .reveal-btn:hover { background: #7c73ff; }
+  .reveal-btn:disabled { background: var(--subtle); cursor: not-allowed; }
+  .state-container {
+    flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 16px; color: var(--muted); padding: 60px 24px;
+  }
+  .state-icon { font-size: 48px; }
+  .state-title { font-size: 18px; font-weight: 600; color: var(--text); }
+  .state-desc { font-size: 13px; text-align: center; max-width: 360px; line-height: 1.6; }
+  .state-error { color: var(--red); }
+  .toast {
+    position: fixed; bottom: 24px; right: 24px; background: var(--surface2);
+    border: 1px solid var(--border); border-radius: 10px; padding: 14px 20px;
+    font-size: 13px; font-weight: 500; z-index: 999; display: flex; align-items: center; gap: 10px;
+    opacity: 0; transform: translateY(10px); transition: all 0.3s; pointer-events: none;
+  }
+  .toast.show { opacity: 1; transform: translateY(0); }
+  .toast.success { border-color: var(--green); color: var(--green); }
+  .toast.error { border-color: var(--red); color: var(--red); }
+  .toast.info { border-color: var(--accent); color: var(--accent2); }
+  .note-box {
+    background: rgba(108,99,255,0.08); border: 1px solid rgba(108,99,255,0.25);
+    border-radius: 8px; padding: 10px 12px; font-size: 11px; color: var(--accent2); line-height: 1.6;
+  }
+  .note-box strong { color: var(--text); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">🎯</div>
+    Lead<span>Hunter</span>
+  </div>
+  <div class="header-stats">
+    <div>Database: <strong>232,764,882</strong> contacts</div>
+    <div>Powered by Apollo.io</div>
+  </div>
+</header>
+
+<div class="layout">
+  <aside class="sidebar">
+    <div>
+      <div class="sidebar-title">API Configuration</div>
+      <div class="field-group" style="margin-top:8px">
+        <label>Apollo API Key</label>
+        <div class="api-key-row">
+          <input type="password" id="apiKey" placeholder="Paste your Apollo API key" autocomplete="off" />
+          <button class="toggle-vis" onclick="toggleKeyVis()" title="Show/hide key">👁</button>
+        </div>
+      </div>
+      <div class="note-box" style="margin-top:10px">
+        <strong>Security:</strong> Your key is sent to your own Vercel backend, never exposed to third parties.
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div>
+      <div class="sidebar-title">Search Filters</div>
+      <div style="display:flex; flex-direction:column; gap:14px; margin-top:8px">
+        <div class="field-group">
+          <label>Job Title / Keywords</label>
+          <input type="text" id="title" placeholder="e.g. CEO, Founder, Owner" />
+        </div>
+        <div class="field-group">
+          <label>Industry</label>
+          <input type="text" id="industry" placeholder="e.g. Real Estate, SaaS" />
+        </div>
+        <div class="field-group">
+          <label>Location (City, State, or Country)</label>
+          <input type="text" id="location" placeholder="e.g. Los Angeles, California" />
+        </div>
+        <div class="field-group">
+          <label>Company Name (optional)</label>
+          <input type="text" id="companyName" placeholder="e.g. Acme Corp" />
+        </div>
+        <div class="field-group">
+          <label>Company Size (employees)</label>
+          <div class="range-row">
+            <input type="number" id="minEmployees" placeholder="Min" min="1" value="1" />
+            <input type="number" id="maxEmployees" placeholder="Max" min="1" value="50" />
+          </div>
+        </div>
+        <div class="field-group">
+          <label>Results per page</label>
+          <select id="perPage">
+            <option value="10">10</option>
+            <option value="25" selected>25</option>
+            <option value="50">50</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <button class="search-btn" id="searchBtn" onclick="doSearch(1)">
+      <span>🔍</span> Search Leads
+    </button>
+
+    <div class="note-box">
+      <strong>Reveal:</strong> Apollo returns obfuscated data. Click <em>Reveal</em> on each row to unlock full email/phone (uses 1 Apollo export credit per contact).
+    </div>
+  </aside>
+
+  <main class="main" id="mainArea">
+    <div class="state-container" id="emptyState">
+      <div class="state-icon">🎯</div>
+      <div class="state-title">Find Your Leads</div>
+      <div class="state-desc">Enter your Apollo API key, set your filters, and hit Search Leads.</div>
+    </div>
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// Backend proxy endpoint — same domain since hosted on Vercel
+const PROXY_URL = '/api/apollo';
+
+let currentLeads = [];
+let currentPage = 1;
+let lastSearchParams = {};
+let revealedData = {};
+
+function toggleKeyVis() {
+  const input = document.getElementById('apiKey');
+  input.type = input.type === 'password' ? 'text' : 'password';
+}
+
+function showToast(msg, type = 'info', duration = 3000) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = `toast ${type} show`;
+  setTimeout(() => { t.className = 'toast'; }, duration);
+}
+
+function setLoading(loading) {
+  const btn = document.getElementById('searchBtn');
+  btn.disabled = loading;
+  btn.innerHTML = loading ? `<div class="spinner"></div> Searching...` : `<span>🔍</span> Search Leads`;
+}
+
+async function callProxy(endpoint, payload) {
+  const apiKey = document.getElementById('apiKey').value.trim();
+  if (!apiKey) throw new Error('Paste your Apollo API key first');
+
+  const res = await fetch(PROXY_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ endpoint, apiKey, payload })
+  });
+
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(data?.message || data?.error || `Error ${res.status}`);
+  }
+  return data;
+}
+
+async function doSearch(page = 1) {
+  const title = document.getElementById('title').value.trim();
+  const industry = document.getElementById('industry').value.trim();
+  const location = document.getElementById('location').value.trim();
+  const companyName = document.getElementById('companyName').value.trim();
+  const minEmp = parseInt(document.getElementById('minEmployees').value) || 1;
+  const maxEmp = parseInt(document.getElementById('maxEmployees').value) || 50;
+  const perPage = parseInt(document.getElementById('perPage').value);
+
+  setLoading(true);
+  currentPage = page;
+
+  const empRanges = getEmpRanges(minEmp, maxEmp);
+
+  const payload = {
+    page: page,
+    per_page: perPage,
+    person_titles: title ? [title] : [],
+    person_locations: location ? [location] : [],
+    organization_locations: location ? [location] : [],
+    q_organization_name: companyName || undefined,
+    organization_num_employees_ranges: empRanges,
+  };
+
+  if (industry) payload.q_keywords = industry;
+
+  try {
+    const data = await callProxy('mixed_people/search', payload);
+    currentLeads = data.people || [];
+    renderResults(data, page, perPage);
+  } catch (err) {
+    showError(err.message);
+  }
+  setLoading(false);
+}
+
+function getEmpRanges(min, max) {
+  const buckets = [[1,10],[11,20],[21,50],[51,100],[101,200],[201,500],[501,1000],[1001,5000]];
+  return buckets.filter(([lo,hi]) => lo <= max && hi >= min).map(([lo,hi]) => `${lo},${hi}`);
+}
+
+async function revealContact(personId, rowIndex) {
+  const btn = document.querySelector(`#reveal-${rowIndex}`);
+  if (btn) { btn.disabled = true; btn.textContent = '...'; }
+
+  try {
+    const data = await callProxy('people/match', { id: personId, reveal_personal_emails: true });
+    const p = data.person;
+    if (p) {
+      revealedData[personId] = {
+        first_name: p.first_name,
+        last_name: p.last_name,
+        email: p.email || (p.personal_emails && p.personal_emails[0]) || null,
+        phone: p.phone_numbers && p.phone_numbers[0] ? p.phone_numbers[0].raw_number : null,
+        linkedin: p.linkedin_url || null,
+        website: p.organization?.website_url || null,
+        org_name: p.organization?.name || null
+      };
+      updateRow(rowIndex, personId);
+      showToast('Contact revealed!', 'success');
+    }
+  } catch(err) {
+    showToast(err.message, 'error');
+    if (btn) { btn.disabled = false; btn.textContent = 'Reveal'; }
+  }
+}
+
+function updateRow(rowIndex, personId) {
+  const row = document.querySelector(`tr[data-idx="${rowIndex}"]`);
+  if (!row) return;
+  const revealed = revealedData[personId];
+  if (!revealed) return;
+
+  const nameCell = row.querySelector('.lead-name');
+  if (nameCell && revealed.first_name) {
+    nameCell.textContent = `${revealed.first_name} ${revealed.last_name || ''}`;
+  }
+
+  const contactCell = row.querySelector('.contact-cell');
+  if (contactCell) {
+    contactCell.innerHTML = `
+      ${revealed.email ? `<div class="contact-item has">📧 ${revealed.email}</div>` : '<div class="contact-item">📧 No email</div>'}
+      ${revealed.phone ? `<div class="contact-item has">📞 ${revealed.phone}</div>` : '<div class="contact-item">📞 No phone</div>'}
+    `;
+  }
+
+  const websiteCell = row.querySelector('.website-cell');
+  if (websiteCell && revealed.website) {
+    const domain = revealed.website.replace(/^https?:\/\//, '').replace(/\/$/, '');
+    websiteCell.innerHTML = `<a class="website-link" href="${revealed.website}" target="_blank">${domain}</a>`;
+  }
+
+  const revealCell = row.querySelector('.reveal-cell');
+  if (revealCell) {
+    revealCell.innerHTML = `<span style="color:var(--green);font-size:11px;font-weight:600;">✓ Revealed</span>`;
+  }
+}
+
+function renderResults(data, page, perPage) {
+  const people = data.people || [];
+  const pagination = data.pagination || {};
+  const total = pagination.total_entries || 0;
+  const totalPages = Math.ceil(total / perPage);
+
+  const main = document.getElementById('mainArea');
+
+  if (people.length === 0) {
+    main.innerHTML = `
+      <div class="state-container">
+        <div class="state-icon">🔍</div>
+        <div class="state-title">No Results Found</div>
+        <div class="state-desc">Try broader filters — remove industry, widen location, or simplify the title.</div>
+      </div>`;
+    return;
+  }
+
+  main.innerHTML = `
+    <div class="toolbar">
+      <div class="result-count">
+        Showing <strong>${people.length}</strong> of <strong>${total.toLocaleString()}</strong> leads
+        — Page ${page} of ${totalPages.toLocaleString()}
+      </div>
+      <div style="display:flex;align-items:center;gap:16px">
+        <div class="pagination">
+          <button class="page-btn" onclick="doSearch(${page-1})" ${page <= 1 ? 'disabled' : ''}>← Prev</button>
+          <span>Page ${page}</span>
+          <button class="page-btn" onclick="doSearch(${page+1})" ${page >= totalPages ? 'disabled' : ''}>Next →</button>
+        </div>
+        <div class="toolbar-actions">
+          <button class="btn-outline" onclick="revealAll()">⚡ Reveal All</button>
+          <button class="btn-green" onclick="exportCSV()">⬇ Export CSV</button>
+        </div>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th><th>Person</th><th>Company</th><th>Size</th>
+            <th>Contact Info</th><th>Website</th><th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="leadsBody">${people.map((p, i) => renderRow(p, i, page, perPage)).join('')}</tbody>
+      </table>
+    </div>
+  `;
+}
+
+function renderRow(p, i, page, perPage) {
+  const globalIdx = (page - 1) * perPage + i + 1;
+  const org = p.organization || {};
+  const empCount = org.estimated_num_employees || null;
+  const revealed = revealedData[p.id];
+
+  const nameDisplay = revealed
+    ? `${revealed.first_name} ${revealed.last_name || ''}`
+    : `${p.first_name} ${p.last_name_obfuscated || '???'}`;
+
+  const emailDisplay = revealed?.email
+    ? `<div class="contact-item has">📧 ${revealed.email}</div>`
+    : (p.has_email ? `<div class="contact-item">📧 <span class="badge-locked">🔒 Locked</span></div>` : `<div class="contact-item">📧 <span class="badge-no">—</span></div>`);
+
+  const phoneDisplay = revealed?.phone
+    ? `<div class="contact-item has">📞 ${revealed.phone}</div>`
+    : (p.has_direct_phone === 'Yes' ? `<div class="contact-item">📞 <span class="badge-locked">🔒 Locked</span></div>` : `<div class="contact-item">📞 <span class="badge-no">—</span></div>`);
+
+  const websiteDisplay = revealed?.website
+    ? (() => { const d = revealed.website.replace(/^https?:\/\//,'').replace(/\/$/,''); return `<a class="website-link" href="${revealed.website}" target="_blank">${d}</a>`; })()
+    : (org.website_url ? (() => { const d = org.website_url.replace(/^https?:\/\//,'').replace(/\/$/,''); return `<a class="website-link" href="${org.website_url}" target="_blank">${d}</a>`; })() : `<span class="badge-no">—</span>`);
+
+  const revealedStatus = revealed
+    ? `<span style="color:var(--green);font-size:11px;font-weight:600;">✓ Revealed</span>`
+    : `<button class="reveal-btn" id="reveal-${i}" onclick="revealContact('${p.id}', ${i})">Reveal</button>`;
+
+  return `
+    <tr data-idx="${i}">
+      <td style="color:var(--muted);font-size:12px;font-family:'JetBrains Mono',monospace">${globalIdx}</td>
+      <td>
+        <div class="lead-name">${nameDisplay}</div>
+        <div class="lead-title">${p.title || '—'}</div>
+      </td>
+      <td>
+        <div class="company-name">${org.name || '—'}</div>
+        ${org.industry ? `<div style="font-size:11px;color:var(--muted);margin-top:2px">${org.industry}</div>` : ''}
+      </td>
+      <td>${empCount ? `<span class="company-size">${empCount.toLocaleString()}</span>` : `<span class="badge-no">—</span>`}</td>
+      <td class="contact-cell">${emailDisplay}${phoneDisplay}</td>
+      <td class="website-cell">${websiteDisplay}</td>
+      <td class="reveal-cell">${revealedStatus}</td>
+    </tr>`;
+}
+
+async function revealAll() {
+  if (!currentLeads.length) return;
+  showToast(`Revealing ${currentLeads.length} contacts...`, 'info', 5000);
+  for (let i = 0; i < currentLeads.length; i++) {
+    if (!revealedData[currentLeads[i].id]) {
+      await revealContact(currentLeads[i].id, i);
+      await new Promise(r => setTimeout(r, 300));
+    }
+  }
+  showToast('All contacts revealed!', 'success');
+}
+
+function exportCSV() {
+  if (!currentLeads.length) { showToast('No leads to export', 'error'); return; }
+  const rows = [['#','First Name','Last Name','Title','Company','Industry','Employees','Email','Phone','Website','Location']];
+  currentLeads.forEach((p, i) => {
+    const org = p.organization || {};
+    const rev = revealedData[p.id];
+    const lastName = rev ? rev.last_name : (p.last_name_obfuscated || '');
+    const firstName = p.first_name || '';
+    const email = rev?.email || (p.has_email ? '[Locked]' : '');
+    const phone = rev?.phone || (p.has_direct_phone === 'Yes' ? '[Locked]' : '');
+    const website = rev?.website || org.website_url || '';
+    const location = [p.city, p.state, p.country].filter(Boolean).join(', ');
+    rows.push([i + 1, firstName, lastName, p.title || '', org.name || '', org.industry || '', org.estimated_num_employees || '', email, phone, website, location]);
+  });
+  const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `leads-page${currentPage}-${Date.now()}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast(`Exported ${currentLeads.length} leads`, 'success');
+}
+
+function showError(msg) {
+  const main = document.getElementById('mainArea');
+  main.innerHTML = `
+    <div class="state-container">
+      <div class="state-icon">⚠️</div>
+      <div class="state-title state-error">Search Failed</div>
+      <div class="state-desc state-error">${msg}</div>
+      <div class="state-desc" style="margin-top:8px">Check your API key. If on Apollo's free plan, some endpoints may be restricted.</div>
+    </div>`;
+}
+</script>
+</body>
+</html>
