@@ -311,25 +311,27 @@ function buildSearchFilters() {
 
   const filters = {};
 
+  // Job titles: use legacy array format (array of strings)
   if (titlesRaw) {
-    filters.job_title = {
-      include: titlesRaw.split(',').map(s => s.trim()).filter(Boolean)
-    };
+    filters.job_title = titlesRaw.split(',').map(s => s.trim()).filter(Boolean);
   }
 
+  // Locations: legacy array of strings (per Instantly docs - "Array of locations to include in the search")
   if (locationsRaw) {
-    filters.locations = {
-      include: locationsRaw.split(',').map(s => s.trim()).filter(Boolean)
-    };
+    filters.locations = locationsRaw.split(',').map(s => s.trim()).filter(Boolean);
   }
 
+  // Keywords/industry
   if (keywords) {
     filters.keyword = keywords;
   }
 
+  // Employee count - format is "min,max" string in an array
   filters.employee_count = [`${minEmp},${maxEmp}`];
-  filters.distinct_company = distinctCompany;
-  filters.skip_owned = skipOwned;
+
+  // Boolean flags
+  if (distinctCompany) filters.distinct_company = true;
+  if (skipOwned) filters.skip_owned = true;
 
   return filters;
 }
