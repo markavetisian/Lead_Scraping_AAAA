@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>LeadHunter — Apollo Lead Scraper</title>
+<title>LeadHunter — Instantly SuperSearch</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -24,8 +24,8 @@
   .logo span { color: var(--accent2); }
   .header-stats { display: flex; gap: 24px; font-size: 12px; color: var(--muted); }
   .header-stats strong { color: var(--accent2); font-family: 'JetBrains Mono', monospace; }
-  .layout { display: grid; grid-template-columns: 300px 1fr; min-height: calc(100vh - 61px); }
-  .sidebar { background: var(--surface); border-right: 1px solid var(--border); padding: 24px 20px; display: flex; flex-direction: column; gap: 20px; }
+  .layout { display: grid; grid-template-columns: 320px 1fr; min-height: calc(100vh - 61px); }
+  .sidebar { background: var(--surface); border-right: 1px solid var(--border); padding: 24px 20px; display: flex; flex-direction: column; gap: 18px; overflow-y: auto; }
   .sidebar-title { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1.5px; color: var(--muted); margin-bottom: 4px; }
   .field-group { display: flex; flex-direction: column; gap: 6px; }
   .field-group label { font-size: 12px; font-weight: 500; color: var(--muted); letter-spacing: 0.3px; }
@@ -36,6 +36,7 @@
   }
   .field-group input:focus, .field-group select:focus, .field-group textarea:focus { border-color: var(--accent); }
   .field-group select option { background: var(--surface2); }
+  .field-help { font-size: 11px; color: var(--subtle); margin-top: 2px; }
   .api-key-row { display: flex; gap: 6px; }
   .api-key-row input { flex: 1; font-family: 'JetBrains Mono', monospace; font-size: 12px; }
   .toggle-vis { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; color: var(--muted); padding: 0 10px; cursor: pointer; font-size: 14px; }
@@ -43,39 +44,44 @@
   .divider { height: 1px; background: var(--border); }
   .range-row { display: flex; gap: 8px; }
   .range-row input { flex: 1; }
-  .search-btn {
+  .btn-primary {
     background: var(--accent); color: #fff; border: none; border-radius: 10px;
     padding: 13px; font-size: 14px; font-weight: 600; cursor: pointer;
     transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px;
   }
-  .search-btn:hover { background: #7c73ff; transform: translateY(-1px); }
-  .search-btn:disabled { background: var(--subtle); cursor: not-allowed; transform: none; }
+  .btn-primary:hover:not(:disabled) { background: #7c73ff; transform: translateY(-1px); }
+  .btn-primary:disabled { background: var(--subtle); cursor: not-allowed; transform: none; }
+  .btn-secondary {
+    background: transparent; border: 1px solid var(--border); color: var(--text);
+    border-radius: 10px; padding: 12px; font-size: 13px; font-weight: 500; cursor: pointer;
+    transition: all 0.15s; display: flex; align-items: center; justify-content: center; gap: 6px;
+  }
+  .btn-secondary:hover:not(:disabled) { border-color: var(--accent); color: var(--accent2); }
+  .btn-secondary:disabled { opacity: 0.4; cursor: not-allowed; }
   .spinner { width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.7s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
-  .main { display: flex; flex-direction: column; }
+  .main { display: flex; flex-direction: column; overflow: hidden; }
   .toolbar {
     display: flex; align-items: center; justify-content: space-between;
-    padding: 16px 24px; border-bottom: 1px solid var(--border); background: var(--surface); gap: 16px;
+    padding: 16px 24px; border-bottom: 1px solid var(--border); background: var(--surface); gap: 16px; flex-wrap: wrap;
   }
   .result-count { font-size: 13px; color: var(--muted); }
   .result-count strong { color: var(--text); font-weight: 600; }
-  .toolbar-actions { display: flex; gap: 10px; }
+  .toolbar-actions { display: flex; gap: 10px; align-items: center; }
   .btn-outline {
     background: transparent; border: 1px solid var(--border); color: var(--text);
     border-radius: 8px; padding: 8px 16px; font-size: 13px; font-weight: 500;
     cursor: pointer; transition: all 0.15s; display: flex; align-items: center; gap: 6px;
   }
-  .btn-outline:hover { border-color: var(--accent); color: var(--accent2); }
+  .btn-outline:hover:not(:disabled) { border-color: var(--accent); color: var(--accent2); }
+  .btn-outline:disabled { opacity: 0.4; cursor: not-allowed; }
   .btn-green {
     background: var(--green); border: none; color: #000; border-radius: 8px;
     padding: 8px 16px; font-size: 13px; font-weight: 600; cursor: pointer;
     transition: all 0.15s; display: flex; align-items: center; gap: 6px;
   }
-  .btn-green:hover { background: #16a34a; }
-  .pagination { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
-  .page-btn { background: var(--surface2); border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 4px 10px; cursor: pointer; font-size: 12px; }
-  .page-btn:hover:not(:disabled) { border-color: var(--accent); }
-  .page-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+  .btn-green:hover:not(:disabled) { background: #16a34a; }
+  .btn-green:disabled { opacity: 0.4; cursor: not-allowed; }
   .table-wrap { flex: 1; overflow: auto; }
   table { width: 100%; border-collapse: collapse; font-size: 13px; }
   thead th {
@@ -85,7 +91,7 @@
   }
   tbody tr { border-bottom: 1px solid var(--border); transition: background 0.1s; }
   tbody tr:hover { background: var(--surface2); }
-  td { padding: 13px 16px; vertical-align: middle; max-width: 200px; }
+  td { padding: 13px 16px; vertical-align: middle; max-width: 220px; }
   .lead-name { font-weight: 600; color: var(--text); white-space: nowrap; }
   .lead-title { color: var(--muted); font-size: 12px; margin-top: 2px; }
   .company-name { font-weight: 500; }
@@ -94,36 +100,25 @@
     border-radius: 4px; padding: 2px 8px; font-size: 11px; font-family: 'JetBrains Mono', monospace;
     color: var(--accent2); white-space: nowrap;
   }
-  .contact-item { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 12px; margin-bottom: 3px; font-family: 'JetBrains Mono', monospace; }
-  .contact-item.has { color: var(--text); }
-  .badge-locked {
-    display: inline-flex; align-items: center; gap: 4px;
-    background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.3);
-    color: var(--yellow); border-radius: 4px; padding: 2px 8px; font-size: 11px; font-weight: 500;
-  }
+  .contact-item { display: flex; align-items: center; gap: 6px; color: var(--text); font-size: 12px; margin-bottom: 3px; font-family: 'JetBrains Mono', monospace; word-break: break-all; }
   .badge-no { color: var(--subtle); font-size: 11px; }
   .website-link { color: var(--accent2); text-decoration: none; font-size: 12px; font-family: 'JetBrains Mono', monospace; }
   .website-link:hover { text-decoration: underline; }
-  .reveal-btn {
-    background: var(--accent); border: none; color: #fff; border-radius: 5px;
-    padding: 4px 10px; font-size: 11px; font-weight: 600; cursor: pointer;
-    transition: background 0.15s; white-space: nowrap;
-  }
-  .reveal-btn:hover { background: #7c73ff; }
-  .reveal-btn:disabled { background: var(--subtle); cursor: not-allowed; }
+  .linkedin-link { color: #0a66c2; text-decoration: none; font-size: 12px; font-family: 'JetBrains Mono', monospace; display: inline-flex; align-items: center; gap: 4px; }
+  .linkedin-link:hover { text-decoration: underline; }
   .state-container {
     flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
     gap: 16px; color: var(--muted); padding: 60px 24px;
   }
   .state-icon { font-size: 48px; }
   .state-title { font-size: 18px; font-weight: 600; color: var(--text); }
-  .state-desc { font-size: 13px; text-align: center; max-width: 360px; line-height: 1.6; }
+  .state-desc { font-size: 13px; text-align: center; max-width: 420px; line-height: 1.6; }
   .state-error { color: var(--red); }
   .toast {
     position: fixed; bottom: 24px; right: 24px; background: var(--surface2);
     border: 1px solid var(--border); border-radius: 10px; padding: 14px 20px;
     font-size: 13px; font-weight: 500; z-index: 999; display: flex; align-items: center; gap: 10px;
-    opacity: 0; transform: translateY(10px); transition: all 0.3s; pointer-events: none;
+    opacity: 0; transform: translateY(10px); transition: all 0.3s; pointer-events: none; max-width: 380px;
   }
   .toast.show { opacity: 1; transform: translateY(0); }
   .toast.success { border-color: var(--green); color: var(--green); }
@@ -134,6 +129,16 @@
     border-radius: 8px; padding: 10px 12px; font-size: 11px; color: var(--accent2); line-height: 1.6;
   }
   .note-box strong { color: var(--text); }
+  .count-box {
+    background: rgba(167,139,250,0.1); border: 1px solid var(--accent);
+    border-radius: 10px; padding: 14px 16px; display: flex; align-items: center; justify-content: space-between;
+  }
+  .count-box-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
+  .count-box-value { font-size: 24px; font-weight: 700; color: var(--accent2); font-family: 'JetBrains Mono', monospace; }
+  .progress-bar { width: 100%; height: 4px; background: var(--surface2); border-radius: 2px; overflow: hidden; margin-top: 12px; }
+  .progress-fill { height: 100%; background: var(--accent); transition: width 0.3s; animation: pulse 1.5s infinite; }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
+  .poll-status { font-size: 12px; color: var(--muted); margin-top: 8px; text-align: center; }
 </style>
 </head>
 <body>
@@ -144,8 +149,8 @@
     Lead<span>Hunter</span>
   </div>
   <div class="header-stats">
-    <div>Database: <strong>232,764,882</strong> contacts</div>
-    <div>Powered by Apollo.io</div>
+    <div>Database: <strong>450,000,000</strong> contacts</div>
+    <div>Powered by Instantly SuperSearch</div>
   </div>
 </header>
 
@@ -154,14 +159,11 @@
     <div>
       <div class="sidebar-title">API Configuration</div>
       <div class="field-group" style="margin-top:8px">
-        <label>Apollo API Key</label>
+        <label>Instantly API Key</label>
         <div class="api-key-row">
-          <input type="password" id="apiKey" placeholder="Paste your Apollo API key" autocomplete="off" />
-          <button class="toggle-vis" onclick="toggleKeyVis()" title="Show/hide key">👁</button>
+          <input type="password" id="apiKey" placeholder="Paste your Instantly API key" autocomplete="off" />
+          <button class="toggle-vis" onclick="toggleKeyVis()" title="Show/hide">👁</button>
         </div>
-      </div>
-      <div class="note-box" style="margin-top:10px">
-        <strong>Security:</strong> Your key is sent to your own Vercel backend, never exposed to third parties.
       </div>
     </div>
 
@@ -170,48 +172,71 @@
     <div>
       <div class="sidebar-title">Search Filters</div>
       <div style="display:flex; flex-direction:column; gap:14px; margin-top:8px">
+
         <div class="field-group">
-          <label>Job Title / Keywords</label>
-          <input type="text" id="title" placeholder="e.g. CEO, Founder, Owner" />
+          <label>Job Titles (comma-separated)</label>
+          <input type="text" id="titles" placeholder="CEO, Founder, Owner" />
+          <div class="field-help">Examples: CEO, Founder, Marketing Director</div>
         </div>
+
         <div class="field-group">
-          <label>Industry</label>
-          <input type="text" id="industry" placeholder="e.g. Real Estate, SaaS" />
+          <label>Locations (comma-separated)</label>
+          <input type="text" id="locations" placeholder="United States, California" />
+          <div class="field-help">Cities, states, or countries</div>
         </div>
+
         <div class="field-group">
-          <label>Location (City, State, or Country)</label>
-          <input type="text" id="location" placeholder="e.g. Los Angeles, California" />
+          <label>Industry / Keywords</label>
+          <input type="text" id="keywords" placeholder="SaaS, Real Estate, Marketing" />
         </div>
+
         <div class="field-group">
-          <label>Company Name (optional)</label>
-          <input type="text" id="companyName" placeholder="e.g. Acme Corp" />
-        </div>
-        <div class="field-group">
-          <label>Company Size (employees)</label>
+          <label>Employee Count</label>
           <div class="range-row">
-            <input type="number" id="minEmployees" placeholder="Min" min="1" value="1" />
-            <input type="number" id="maxEmployees" placeholder="Max" min="1" value="50" />
+            <input type="number" id="minEmp" placeholder="Min" min="1" value="1" />
+            <input type="number" id="maxEmp" placeholder="Max" min="1" value="50" />
           </div>
         </div>
+
         <div class="field-group">
-          <label>Results per page</label>
-          <select id="perPage">
-            <option value="10">10</option>
-            <option value="25" selected>25</option>
-            <option value="50">50</option>
+          <label>Max Results to Scrape</label>
+          <select id="limit">
+            <option value="10">10 leads (~15 credits)</option>
+            <option value="25" selected>25 leads (~38 credits)</option>
+            <option value="50">50 leads (~75 credits)</option>
+            <option value="100">100 leads (~150 credits)</option>
           </select>
+          <div class="field-help">~1.5 credits per verified email</div>
+        </div>
+
+        <div class="field-group">
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+            <input type="checkbox" id="distinctCompany" style="width:auto" />
+            <span>One lead per company</span>
+          </label>
+        </div>
+
+        <div class="field-group">
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+            <input type="checkbox" id="skipOwned" checked style="width:auto" />
+            <span>Skip leads I already own</span>
+          </label>
         </div>
       </div>
     </div>
 
     <div class="divider"></div>
 
-    <button class="search-btn" id="searchBtn" onclick="doSearch(1)">
-      <span>🔍</span> Search Leads
+    <button class="btn-secondary" id="countBtn" onclick="doCount()">
+      <span>📊</span> Preview Lead Count
+    </button>
+
+    <button class="btn-primary" id="searchBtn" onclick="doEnrich()" disabled>
+      <span>🚀</span> Scrape Leads
     </button>
 
     <div class="note-box">
-      <strong>Reveal:</strong> Apollo returns obfuscated data. Click <em>Reveal</em> on each row to unlock full email/phone (uses 1 Apollo export credit per contact).
+      <strong>Flow:</strong> Preview count first (free) → then run enrichment (uses credits). Leads stream into your Instantly workspace and into this view.
     </div>
   </aside>
 
@@ -219,7 +244,7 @@
     <div class="state-container" id="emptyState">
       <div class="state-icon">🎯</div>
       <div class="state-title">Find Your Leads</div>
-      <div class="state-desc">Enter your Apollo API key, set your filters, and hit Search Leads.</div>
+      <div class="state-desc">Set your filters, hit <strong>Preview Lead Count</strong> to see how many matches exist (free), then <strong>Scrape Leads</strong> to pull verified emails from 450M+ contacts.</div>
     </div>
   </main>
 </div>
@@ -227,181 +252,256 @@
 <div class="toast" id="toast"></div>
 
 <script>
-// Backend proxy endpoint — same domain since hosted on Vercel
-const PROXY_URL = '/api/apollo';
+const PROXY_URL = '/api/instantly';
+const POLL_INTERVAL = 4000; // 4 seconds
+const POLL_MAX = 60; // 4 minutes max
 
 let currentLeads = [];
-let currentPage = 1;
-let lastSearchParams = {};
-let revealedData = {};
+let currentListId = null;
+let pollTimer = null;
+let pollCount = 0;
+let expectedCount = 0;
 
 function toggleKeyVis() {
   const input = document.getElementById('apiKey');
   input.type = input.type === 'password' ? 'text' : 'password';
 }
 
-function showToast(msg, type = 'info', duration = 3000) {
+function showToast(msg, type = 'info', duration = 3500) {
   const t = document.getElementById('toast');
   t.textContent = msg;
   t.className = `toast ${type} show`;
   setTimeout(() => { t.className = 'toast'; }, duration);
 }
 
-function setLoading(loading) {
-  const btn = document.getElementById('searchBtn');
+function setBtnLoading(id, loading, text, icon) {
+  const btn = document.getElementById(id);
   btn.disabled = loading;
-  btn.innerHTML = loading ? `<div class="spinner"></div> Searching...` : `<span>🔍</span> Search Leads`;
+  btn.innerHTML = loading
+    ? `<div class="spinner"></div> ${text}`
+    : `<span>${icon}</span> ${text}`;
 }
 
-async function callProxy(endpoint, payload) {
+async function callProxy(action, payload) {
   const apiKey = document.getElementById('apiKey').value.trim();
-  if (!apiKey) throw new Error('Paste your Apollo API key first');
+  if (!apiKey) throw new Error('Paste your Instantly API key first');
 
   const res = await fetch(PROXY_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ endpoint, apiKey, payload })
+    body: JSON.stringify({ action, apiKey, payload })
   });
 
   const data = await res.json();
   if (!res.ok) {
-    throw new Error(data?.message || data?.error || `Error ${res.status}`);
+    const msg = data?.message || data?.error || `Error ${res.status}`;
+    throw new Error(msg);
   }
   return data;
 }
 
-async function doSearch(page = 1) {
-  const title = document.getElementById('title').value.trim();
-  const industry = document.getElementById('industry').value.trim();
-  const location = document.getElementById('location').value.trim();
-  const companyName = document.getElementById('companyName').value.trim();
-  const minEmp = parseInt(document.getElementById('minEmployees').value) || 1;
-  const maxEmp = parseInt(document.getElementById('maxEmployees').value) || 50;
-  const perPage = parseInt(document.getElementById('perPage').value);
+function buildSearchFilters() {
+  const titlesRaw = document.getElementById('titles').value.trim();
+  const locationsRaw = document.getElementById('locations').value.trim();
+  const keywords = document.getElementById('keywords').value.trim();
+  const minEmp = parseInt(document.getElementById('minEmp').value) || 1;
+  const maxEmp = parseInt(document.getElementById('maxEmp').value) || 50;
+  const distinctCompany = document.getElementById('distinctCompany').checked;
+  const skipOwned = document.getElementById('skipOwned').checked;
 
-  setLoading(true);
-  currentPage = page;
+  const filters = {};
 
-  const empRanges = getEmpRanges(minEmp, maxEmp);
-
-  const payload = {
-    page: page,
-    per_page: perPage,
-    person_titles: title ? [title] : [],
-    person_locations: location ? [location] : [],
-    organization_locations: location ? [location] : [],
-    q_organization_name: companyName || undefined,
-    organization_num_employees_ranges: empRanges,
-  };
-
-  if (industry) payload.q_keywords = industry;
-
-  try {
-    const data = await callProxy('mixed_people/search', payload);
-    currentLeads = data.people || [];
-    renderResults(data, page, perPage);
-  } catch (err) {
-    showError(err.message);
+  if (titlesRaw) {
+    filters.job_title = {
+      include: titlesRaw.split(',').map(s => s.trim()).filter(Boolean)
+    };
   }
-  setLoading(false);
+
+  if (locationsRaw) {
+    filters.locations = {
+      include: locationsRaw.split(',').map(s => s.trim()).filter(Boolean)
+    };
+  }
+
+  if (keywords) {
+    filters.keyword = keywords;
+  }
+
+  filters.employee_count = [`${minEmp},${maxEmp}`];
+  filters.distinct_company = distinctCompany;
+  filters.skip_owned = skipOwned;
+
+  return filters;
 }
 
-function getEmpRanges(min, max) {
-  const buckets = [[1,10],[11,20],[21,50],[51,100],[101,200],[201,500],[501,1000],[1001,5000]];
-  return buckets.filter(([lo,hi]) => lo <= max && hi >= min).map(([lo,hi]) => `${lo},${hi}`);
-}
-
-async function revealContact(personId, rowIndex) {
-  const btn = document.querySelector(`#reveal-${rowIndex}`);
-  if (btn) { btn.disabled = true; btn.textContent = '...'; }
+async function doCount() {
+  setBtnLoading('countBtn', true, 'Counting...', '📊');
+  document.getElementById('searchBtn').disabled = true;
 
   try {
-    const data = await callProxy('people/match', { id: personId, reveal_personal_emails: true });
-    const p = data.person;
-    if (p) {
-      revealedData[personId] = {
-        first_name: p.first_name,
-        last_name: p.last_name,
-        email: p.email || (p.personal_emails && p.personal_emails[0]) || null,
-        phone: p.phone_numbers && p.phone_numbers[0] ? p.phone_numbers[0].raw_number : null,
-        linkedin: p.linkedin_url || null,
-        website: p.organization?.website_url || null,
-        org_name: p.organization?.name || null
-      };
-      updateRow(rowIndex, personId);
-      showToast('Contact revealed!', 'success');
+    const filters = buildSearchFilters();
+    const data = await callProxy('count', { search_filters: filters });
+
+    const count = data.count || data.total || data.leads_count || 0;
+    expectedCount = count;
+
+    if (count === 0) {
+      renderEmpty('No leads match these filters', 'Try broader job titles or locations.');
+    } else {
+      renderCount(count);
+      document.getElementById('searchBtn').disabled = false;
     }
-  } catch(err) {
-    showToast(err.message, 'error');
-    if (btn) { btn.disabled = false; btn.textContent = 'Reveal'; }
+  } catch (err) {
+    renderError(err.message);
+  }
+  setBtnLoading('countBtn', false, 'Preview Lead Count', '📊');
+}
+
+async function doEnrich() {
+  setBtnLoading('searchBtn', true, 'Scraping...', '🚀');
+  document.getElementById('countBtn').disabled = true;
+
+  const limit = parseInt(document.getElementById('limit').value);
+
+  try {
+    const filters = buildSearchFilters();
+    const listName = `LeadHunter ${new Date().toISOString().slice(0,16).replace('T',' ')}`;
+
+    const data = await callProxy('enrich', {
+      search_filters: filters,
+      limit: limit,
+      list_name: listName
+    });
+
+    currentListId = data.resource_id || data.id;
+    if (!currentListId) {
+      throw new Error('No list ID returned from enrichment');
+    }
+
+    showToast(`Enrichment started! Polling for results...`, 'info');
+    renderPolling(limit);
+    startPolling(currentListId, limit);
+  } catch (err) {
+    renderError(err.message);
+    setBtnLoading('searchBtn', false, 'Scrape Leads', '🚀');
+    document.getElementById('countBtn').disabled = false;
   }
 }
 
-function updateRow(rowIndex, personId) {
-  const row = document.querySelector(`tr[data-idx="${rowIndex}"]`);
-  if (!row) return;
-  const revealed = revealedData[personId];
-  if (!revealed) return;
+function startPolling(listId, expectedLimit) {
+  pollCount = 0;
+  currentLeads = [];
+  pollTimer = setInterval(() => pollLeads(listId, expectedLimit), POLL_INTERVAL);
+  pollLeads(listId, expectedLimit); // immediate first poll
+}
 
-  const nameCell = row.querySelector('.lead-name');
-  if (nameCell && revealed.first_name) {
-    nameCell.textContent = `${revealed.first_name} ${revealed.last_name || ''}`;
-  }
+async function pollLeads(listId, expectedLimit) {
+  pollCount++;
 
-  const contactCell = row.querySelector('.contact-cell');
-  if (contactCell) {
-    contactCell.innerHTML = `
-      ${revealed.email ? `<div class="contact-item has">📧 ${revealed.email}</div>` : '<div class="contact-item">📧 No email</div>'}
-      ${revealed.phone ? `<div class="contact-item has">📞 ${revealed.phone}</div>` : '<div class="contact-item">📞 No phone</div>'}
-    `;
-  }
+  try {
+    const data = await callProxy('list_leads', {
+      list_ids: [listId],
+      limit: 100
+    });
 
-  const websiteCell = row.querySelector('.website-cell');
-  if (websiteCell && revealed.website) {
-    const domain = revealed.website.replace(/^https?:\/\//, '').replace(/\/$/, '');
-    websiteCell.innerHTML = `<a class="website-link" href="${revealed.website}" target="_blank">${domain}</a>`;
-  }
+    const items = data.items || data.leads || data.data || [];
+    currentLeads = items;
 
-  const revealCell = row.querySelector('.reveal-cell');
-  if (revealCell) {
-    revealCell.innerHTML = `<span style="color:var(--green);font-size:11px;font-weight:600;">✓ Revealed</span>`;
+    updatePolling(items.length, expectedLimit);
+
+    // Stop polling when we have all expected leads OR max polls reached
+    const allDone = items.length >= expectedLimit;
+    const timedOut = pollCount >= POLL_MAX;
+
+    if (allDone || timedOut) {
+      clearInterval(pollTimer);
+      pollTimer = null;
+      renderResults(items, expectedLimit, timedOut && items.length < expectedLimit);
+      setBtnLoading('searchBtn', false, 'Scrape Leads', '🚀');
+      document.getElementById('countBtn').disabled = false;
+      if (allDone) {
+        showToast(`Done! ${items.length} leads scraped.`, 'success');
+      } else if (items.length > 0) {
+        showToast(`Got ${items.length} leads (timeout). Check your Instantly workspace for the rest.`, 'info', 6000);
+      } else {
+        showToast(`Enrichment is still running in Instantly. Check your workspace.`, 'info', 6000);
+      }
+    }
+  } catch (err) {
+    console.error('Poll error:', err);
+    // Don't stop polling on transient errors
+    if (pollCount >= POLL_MAX) {
+      clearInterval(pollTimer);
+      pollTimer = null;
+      renderError('Polling timeout: ' + err.message);
+      setBtnLoading('searchBtn', false, 'Scrape Leads', '🚀');
+      document.getElementById('countBtn').disabled = false;
+    }
   }
 }
 
-function renderResults(data, page, perPage) {
-  const people = data.people || [];
-  const pagination = data.pagination || {};
-  const total = pagination.total_entries || 0;
-  const totalPages = Math.ceil(total / perPage);
-
+function renderCount(count) {
   const main = document.getElementById('mainArea');
+  main.innerHTML = `
+    <div class="state-container">
+      <div class="state-icon">📊</div>
+      <div class="state-title">Lead Count Preview</div>
+      <div class="count-box" style="margin-top:8px;min-width:280px">
+        <div>
+          <div class="count-box-label">Matching Leads</div>
+          <div class="count-box-value">${count.toLocaleString()}</div>
+        </div>
+        <div style="font-size:32px">🎯</div>
+      </div>
+      <div class="state-desc">
+        That's how many contacts match your filters. Set "Max Results" in the sidebar and hit <strong>Scrape Leads</strong> to pull verified emails.
+        <br><br>
+        <em style="color:var(--muted)">Counting is free. Scraping uses ~1.5 credits per verified email.</em>
+      </div>
+    </div>`;
+}
 
-  if (people.length === 0) {
-    main.innerHTML = `
-      <div class="state-container">
-        <div class="state-icon">🔍</div>
-        <div class="state-title">No Results Found</div>
-        <div class="state-desc">Try broader filters — remove industry, widen location, or simplify the title.</div>
-      </div>`;
+function renderPolling(expected) {
+  const main = document.getElementById('mainArea');
+  main.innerHTML = `
+    <div class="state-container">
+      <div class="state-icon">🚀</div>
+      <div class="state-title">Scraping leads from 450M+ contacts</div>
+      <div style="width:300px;text-align:center">
+        <div id="pollStatus" class="poll-status">Waiting for first leads...</div>
+        <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:5%"></div></div>
+        <div id="pollCount" class="poll-status">0 / ${expected} leads received</div>
+      </div>
+      <div class="state-desc">Instantly is enriching across 5+ data providers in real-time. This usually takes 30-90 seconds.</div>
+    </div>`;
+}
+
+function updatePolling(current, expected) {
+  const pct = Math.min(95, Math.max(5, (current / expected) * 100));
+  const fill = document.getElementById('progressFill');
+  const countEl = document.getElementById('pollCount');
+  const statusEl = document.getElementById('pollStatus');
+  if (fill) fill.style.width = `${pct}%`;
+  if (countEl) countEl.textContent = `${current} / ${expected} leads received`;
+  if (statusEl) statusEl.textContent = current > 0 ? `Receiving leads... (poll ${pollCount})` : `Waiting for enrichment... (poll ${pollCount})`;
+}
+
+function renderResults(leads, expected, partial) {
+  if (!leads.length) {
+    renderEmpty('No leads yet', 'Enrichment may still be running. Refresh in a minute or check your Instantly workspace.');
     return;
   }
 
+  const main = document.getElementById('mainArea');
   main.innerHTML = `
     <div class="toolbar">
       <div class="result-count">
-        Showing <strong>${people.length}</strong> of <strong>${total.toLocaleString()}</strong> leads
-        — Page ${page} of ${totalPages.toLocaleString()}
+        Scraped <strong>${leads.length}</strong> ${partial ? `of ${expected} requested ` : ''}leads
+        ${partial ? '<span style="color:var(--yellow);margin-left:8px">⚠ Partial result</span>' : ''}
       </div>
-      <div style="display:flex;align-items:center;gap:16px">
-        <div class="pagination">
-          <button class="page-btn" onclick="doSearch(${page-1})" ${page <= 1 ? 'disabled' : ''}>← Prev</button>
-          <span>Page ${page}</span>
-          <button class="page-btn" onclick="doSearch(${page+1})" ${page >= totalPages ? 'disabled' : ''}>Next →</button>
-        </div>
-        <div class="toolbar-actions">
-          <button class="btn-outline" onclick="revealAll()">⚡ Reveal All</button>
-          <button class="btn-green" onclick="exportCSV()">⬇ Export CSV</button>
-        </div>
+      <div class="toolbar-actions">
+        <button class="btn-outline" onclick="refreshLeads()">↻ Refresh</button>
+        <button class="btn-green" onclick="exportCSV()">⬇ Export CSV</button>
       </div>
     </div>
     <div class="table-wrap">
@@ -409,104 +509,122 @@ function renderResults(data, page, perPage) {
         <thead>
           <tr>
             <th>#</th><th>Person</th><th>Company</th><th>Size</th>
-            <th>Contact Info</th><th>Website</th><th>Action</th>
+            <th>Email</th><th>Phone</th><th>LinkedIn</th><th>Website</th>
           </tr>
         </thead>
-        <tbody id="leadsBody">${people.map((p, i) => renderRow(p, i, page, perPage)).join('')}</tbody>
+        <tbody>${leads.map((l, i) => renderRow(l, i)).join('')}</tbody>
       </table>
     </div>
   `;
 }
 
-function renderRow(p, i, page, perPage) {
-  const globalIdx = (page - 1) * perPage + i + 1;
-  const org = p.organization || {};
-  const empCount = org.estimated_num_employees || null;
-  const revealed = revealedData[p.id];
+function renderRow(lead, i) {
+  // Instantly lead object structure varies; pull defensively
+  const firstName = lead.first_name || lead.firstName || '';
+  const lastName = lead.last_name || lead.lastName || '';
+  const title = lead.title || lead.job_title || lead.position || '—';
+  const company = lead.company_name || lead.company || lead.organization_name || '—';
+  const email = lead.email || lead.work_email || '';
+  const phone = lead.phone || lead.phone_number || lead.work_phone || '';
+  const linkedin = lead.linkedin_url || lead.linkedin || '';
+  const website = lead.company_domain || lead.website || lead.domain || '';
+  const empCount = lead.employee_count || lead.company_employee_count || lead.organization_size || null;
 
-  const nameDisplay = revealed
-    ? `${revealed.first_name} ${revealed.last_name || ''}`
-    : `${p.first_name} ${p.last_name_obfuscated || '???'}`;
+  const websiteDisplay = website
+    ? (() => {
+        const url = website.startsWith('http') ? website : `https://${website}`;
+        const d = website.replace(/^https?:\/\//,'').replace(/\/$/,'');
+        return `<a class="website-link" href="${url}" target="_blank">${d}</a>`;
+      })()
+    : `<span class="badge-no">—</span>`;
 
-  const emailDisplay = revealed?.email
-    ? `<div class="contact-item has">📧 ${revealed.email}</div>`
-    : (p.has_email ? `<div class="contact-item">📧 <span class="badge-locked">🔒 Locked</span></div>` : `<div class="contact-item">📧 <span class="badge-no">—</span></div>`);
-
-  const phoneDisplay = revealed?.phone
-    ? `<div class="contact-item has">📞 ${revealed.phone}</div>`
-    : (p.has_direct_phone === 'Yes' ? `<div class="contact-item">📞 <span class="badge-locked">🔒 Locked</span></div>` : `<div class="contact-item">📞 <span class="badge-no">—</span></div>`);
-
-  const websiteDisplay = revealed?.website
-    ? (() => { const d = revealed.website.replace(/^https?:\/\//,'').replace(/\/$/,''); return `<a class="website-link" href="${revealed.website}" target="_blank">${d}</a>`; })()
-    : (org.website_url ? (() => { const d = org.website_url.replace(/^https?:\/\//,'').replace(/\/$/,''); return `<a class="website-link" href="${org.website_url}" target="_blank">${d}</a>`; })() : `<span class="badge-no">—</span>`);
-
-  const revealedStatus = revealed
-    ? `<span style="color:var(--green);font-size:11px;font-weight:600;">✓ Revealed</span>`
-    : `<button class="reveal-btn" id="reveal-${i}" onclick="revealContact('${p.id}', ${i})">Reveal</button>`;
+  const linkedinDisplay = linkedin
+    ? `<a class="linkedin-link" href="${linkedin}" target="_blank">View ↗</a>`
+    : `<span class="badge-no">—</span>`;
 
   return `
-    <tr data-idx="${i}">
-      <td style="color:var(--muted);font-size:12px;font-family:'JetBrains Mono',monospace">${globalIdx}</td>
+    <tr>
+      <td style="color:var(--muted);font-size:12px;font-family:'JetBrains Mono',monospace">${i + 1}</td>
       <td>
-        <div class="lead-name">${nameDisplay}</div>
-        <div class="lead-title">${p.title || '—'}</div>
+        <div class="lead-name">${firstName} ${lastName}</div>
+        <div class="lead-title">${title}</div>
       </td>
       <td>
-        <div class="company-name">${org.name || '—'}</div>
-        ${org.industry ? `<div style="font-size:11px;color:var(--muted);margin-top:2px">${org.industry}</div>` : ''}
+        <div class="company-name">${company}</div>
       </td>
-      <td>${empCount ? `<span class="company-size">${empCount.toLocaleString()}</span>` : `<span class="badge-no">—</span>`}</td>
-      <td class="contact-cell">${emailDisplay}${phoneDisplay}</td>
-      <td class="website-cell">${websiteDisplay}</td>
-      <td class="reveal-cell">${revealedStatus}</td>
+      <td>${empCount ? `<span class="company-size">${empCount}</span>` : `<span class="badge-no">—</span>`}</td>
+      <td>${email ? `<div class="contact-item">📧 ${email}</div>` : `<span class="badge-no">—</span>`}</td>
+      <td>${phone ? `<div class="contact-item">📞 ${phone}</div>` : `<span class="badge-no">—</span>`}</td>
+      <td>${linkedinDisplay}</td>
+      <td>${websiteDisplay}</td>
     </tr>`;
 }
 
-async function revealAll() {
-  if (!currentLeads.length) return;
-  showToast(`Revealing ${currentLeads.length} contacts...`, 'info', 5000);
-  for (let i = 0; i < currentLeads.length; i++) {
-    if (!revealedData[currentLeads[i].id]) {
-      await revealContact(currentLeads[i].id, i);
-      await new Promise(r => setTimeout(r, 300));
-    }
+async function refreshLeads() {
+  if (!currentListId) return;
+  showToast('Refreshing...', 'info', 1500);
+  try {
+    const data = await callProxy('list_leads', { list_ids: [currentListId], limit: 100 });
+    const items = data.items || data.leads || data.data || [];
+    currentLeads = items;
+    renderResults(items, items.length, false);
+    showToast(`${items.length} leads loaded`, 'success');
+  } catch (err) {
+    showToast(err.message, 'error');
   }
-  showToast('All contacts revealed!', 'success');
 }
 
 function exportCSV() {
   if (!currentLeads.length) { showToast('No leads to export', 'error'); return; }
-  const rows = [['#','First Name','Last Name','Title','Company','Industry','Employees','Email','Phone','Website','Location']];
-  currentLeads.forEach((p, i) => {
-    const org = p.organization || {};
-    const rev = revealedData[p.id];
-    const lastName = rev ? rev.last_name : (p.last_name_obfuscated || '');
-    const firstName = p.first_name || '';
-    const email = rev?.email || (p.has_email ? '[Locked]' : '');
-    const phone = rev?.phone || (p.has_direct_phone === 'Yes' ? '[Locked]' : '');
-    const website = rev?.website || org.website_url || '';
-    const location = [p.city, p.state, p.country].filter(Boolean).join(', ');
-    rows.push([i + 1, firstName, lastName, p.title || '', org.name || '', org.industry || '', org.estimated_num_employees || '', email, phone, website, location]);
+  const rows = [['#','First Name','Last Name','Title','Company','Website','Employees','Email','Phone','LinkedIn','City','State','Country']];
+
+  currentLeads.forEach((l, i) => {
+    rows.push([
+      i + 1,
+      l.first_name || l.firstName || '',
+      l.last_name || l.lastName || '',
+      l.title || l.job_title || '',
+      l.company_name || l.company || '',
+      l.company_domain || l.website || '',
+      l.employee_count || l.company_employee_count || '',
+      l.email || l.work_email || '',
+      l.phone || l.phone_number || '',
+      l.linkedin_url || l.linkedin || '',
+      l.city || '',
+      l.state || '',
+      l.country || ''
+    ]);
   });
+
   const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
   const blob = new Blob([csv], { type: 'text/csv' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `leads-page${currentPage}-${Date.now()}.csv`;
+  a.download = `leads-${Date.now()}.csv`;
   a.click();
   URL.revokeObjectURL(url);
   showToast(`Exported ${currentLeads.length} leads`, 'success');
 }
 
-function showError(msg) {
+function renderEmpty(title, desc) {
+  const main = document.getElementById('mainArea');
+  main.innerHTML = `
+    <div class="state-container">
+      <div class="state-icon">🔍</div>
+      <div class="state-title">${title}</div>
+      <div class="state-desc">${desc}</div>
+    </div>`;
+}
+
+function renderError(msg) {
   const main = document.getElementById('mainArea');
   main.innerHTML = `
     <div class="state-container">
       <div class="state-icon">⚠️</div>
-      <div class="state-title state-error">Search Failed</div>
+      <div class="state-title state-error">Request Failed</div>
       <div class="state-desc state-error">${msg}</div>
-      <div class="state-desc" style="margin-top:8px">Check your API key. If on Apollo's free plan, some endpoints may be restricted.</div>
+      <div class="state-desc" style="margin-top:8px">Check your API key has SuperSearch scopes enabled, and that you have available credits.</div>
     </div>`;
 }
 </script>
