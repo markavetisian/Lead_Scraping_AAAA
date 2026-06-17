@@ -192,10 +192,31 @@
 
         <div class="field-group">
           <label>Employee Count</label>
-          <div class="range-row">
-            <input type="number" id="minEmp" placeholder="Min" min="1" value="1" />
-            <input type="number" id="maxEmp" placeholder="Max" min="1" value="50" />
-          </div>
+          <select id="empBucket">
+            <option value="any">Any size</option>
+            <option value="0 - 25" selected>0 - 25 (small business)</option>
+            <option value="25 - 100">25 - 100</option>
+            <option value="100 - 250">100 - 250</option>
+            <option value="250 - 1000">250 - 1000</option>
+            <option value="1K - 10K">1K - 10K</option>
+            <option value="10K - 50K">10K - 50K</option>
+            <option value="50K - 100K">50K - 100K</option>
+            <option value="> 100K">100K+</option>
+          </select>
+          <div class="field-help">Instantly uses fixed buckets, not custom ranges</div>
+        </div>
+
+        <div class="field-group">
+          <label>Seniority Level (optional)</label>
+          <select id="level">
+            <option value="any">Any level</option>
+            <option value="C-Level">C-Level (CEO, CTO, CFO...)</option>
+            <option value="VP-Level">VP-Level</option>
+            <option value="Director-Level">Director-Level</option>
+            <option value="Manager-Level">Manager-Level</option>
+            <option value="Owner">Owner</option>
+            <option value="Staff">Staff</option>
+          </select>
         </div>
 
         <div class="field-group">
@@ -304,34 +325,50 @@ function buildSearchFilters() {
   const titlesRaw = document.getElementById('titles').value.trim();
   const locationsRaw = document.getElementById('locations').value.trim();
   const keywords = document.getElementById('keywords').value.trim();
-  const minEmp = parseInt(document.getElementById('minEmp').value) || 1;
-  const maxEmp = parseInt(document.getElementById('maxEmp').value) || 50;
+  const empBucket = document.getElementById('empBucket').value;
+  const level = document.getElementById('level').value;
   const distinctCompany = document.getElementById('distinctCompany').checked;
   const skipOwned = document.getElementById('skipOwned').checked;
 
   const filters = {};
 
-  // Job titles: use legacy array format (array of strings)
+  // Job titles: 'title' is an object with include array
   if (titlesRaw) {
-    filters.job_title = titlesRaw.split(',').map(s => s.trim()).filter(Boolean);
+    filters.title = {
+      include: titlesRaw.split(',').map(s => s.trim()).filter(Boolean)
+    };
   }
 
-  // Locations: legacy array of strings (per Instantly docs - "Array of locations to include in the search")
+  // Locations: array of objects with country/state/city keys
   if (locationsRaw) {
-    filters.locations = locationsRaw.split(',').map(s => s.trim()).filter(Boolean);
+    filters.locations = locationsRaw.split(',').map(s => {
+      const v = s.trim();
+      if (!v) return null;
+      // Heuristic: if 2 letters → country code, else send as country name
+      return { country: v };
+    }).filter(Boolean);
   }
 
-  // Keywords/industry
+  // Keywords/industry → keyword_filter is an object
   if (keywords) {
-    filters.keyword = keywords;
+    filters.keyword_filter = {
+      include: keywords.split(',').map(s => s.trim()).filter(Boolean)
+    };
   }
 
-  // Employee count - format is "min,max" string in an array
-  filters.employee_count = [`${minEmp},${maxEmp}`];
+  // Employee count - must be enum bucket strings
+  if (empBucket && empBucket !== 'any') {
+    filters.employee_count = [empBucket];
+  }
 
-  // Boolean flags
-  if (distinctCompany) filters.distinct_company = true;
-  if (skipOwned) filters.skip_owned = true;
+  // Seniority level - enum
+  if (level && level !== 'any') {
+    filters.level = [level];
+  }
+
+  // Boolean flags - CORRECT field names per docs
+  if (distinctCompany) filters.show_one_lead_per_company = true;
+  if (skipOwned) filters.skip_owned_leads = true;
 
   return filters;
 }
