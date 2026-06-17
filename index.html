@@ -340,12 +340,31 @@ function buildSearchFilters() {
   }
 
   // Locations: array of objects with country/state/city keys
+  // Instantly expects ISO country codes for `country` field
   if (locationsRaw) {
+    const countryMap = {
+      'united states': 'US', 'usa': 'US', 'us': 'US', 'america': 'US',
+      'united kingdom': 'GB', 'uk': 'GB', 'britain': 'GB', 'england': 'GB',
+      'canada': 'CA', 'australia': 'AU', 'germany': 'DE', 'france': 'FR',
+      'spain': 'ES', 'italy': 'IT', 'netherlands': 'NL', 'sweden': 'SE',
+      'norway': 'NO', 'denmark': 'DK', 'finland': 'FI', 'ireland': 'IE',
+      'mexico': 'MX', 'brazil': 'BR', 'argentina': 'AR', 'japan': 'JP',
+      'china': 'CN', 'india': 'IN', 'singapore': 'SG', 'uae': 'AE',
+      'south africa': 'ZA', 'new zealand': 'NZ', 'switzerland': 'CH',
+      'belgium': 'BE', 'poland': 'PL', 'portugal': 'PT', 'austria': 'AT',
+      'armenia': 'AM', 'russia': 'RU', 'ukraine': 'UA', 'turkey': 'TR',
+      'israel': 'IL', 'south korea': 'KR', 'korea': 'KR'
+    };
     filters.locations = locationsRaw.split(',').map(s => {
       const v = s.trim();
       if (!v) return null;
-      // Heuristic: if 2 letters → country code, else send as country name
-      return { country: v };
+      const lower = v.toLowerCase();
+      // Country code match
+      if (countryMap[lower]) return { country: countryMap[lower] };
+      // 2-letter uppercase → assume ISO code
+      if (/^[A-Z]{2}$/.test(v)) return { country: v };
+      // Otherwise treat as city or state name (let API try)
+      return { city: v };
     }).filter(Boolean);
   }
 
